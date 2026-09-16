@@ -114,6 +114,7 @@ export default function FinalQuote({
                 .join(' + '),
             `Set-up: ${quote.setupLabel}${quote.setupFee ? ` ($${quote.setupFee})` : ' (no charge)'}`,
             `Tier: ${quote.tier}`,
+            'DECORATION ONLY - garments quoted separately',
           ].join(' | ')
         : selectedProject === 'screenPrinting'
             ? 'Screen print - priced by hand, no online rate'
@@ -147,10 +148,7 @@ export default function FinalQuote({
             quantity,
             price_per_item: quote?.quotable ? pricePerItem.toFixed(2) : 'Quote requested',
             total_price: quote?.quotable ? totalPrice.toFixed(2) : 'Quote requested',
-            // Kevin's sheet prices decoration only; it carries no blank/garment cost.
-            pricing_note: quote?.quotable
-                ? 'Decoration only. Garments quoted separately.'
-                : 'Customer used the calculator; this service needs a hand-priced quote.',
+
             artwork_status: artworkStatus({
                 artworkUrl: artworkUploaded ? selectedArtwork : null,
                 pendingFilename,
