@@ -163,7 +163,7 @@ export default function FinalQuote({
         await sendQuote(payload, { file: artworkFile, artworkUrl: artworkUploaded ? selectedArtwork : null });
 
         window.parent.postMessage(
-            { event: 'calculator_submission', totalQuote: totalPrice.toFixed(2), pricePerItem: pricePerItem.toFixed(2), quantity },
+            { event: 'calculator_submission', quotable: !!quote?.quotable, totalQuote: quote?.quotable ? totalPrice.toFixed(2) : '', pricePerItem: quote?.quotable ? pricePerItem.toFixed(2) : '', quantity },
             '*'
         );
         onNext();
@@ -223,7 +223,9 @@ export default function FinalQuote({
                     }}>
                         <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '0.7rem', color: '#f0ede4', fontWeight: 600 }}>{quantity} Items</span>
                         <span style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.15)' }}></span>
-                        <span style={{ fontFamily: "'Poppins', sans-serif", fontSize: '0.8rem', color: '#e9ce32', fontWeight: 700 }}>${pricePerItem.toFixed(2)}/ea</span>
+                        <span style={{ fontFamily: "'Poppins', sans-serif", fontSize: '0.8rem', color: '#e9ce32', fontWeight: 700 }}>
+                            {quote?.quotable ? `$${pricePerItem.toFixed(2)}/ea` : 'Quoted by hand'}
+                        </span>
                     </div>
                     {belowMOQ && (
                         <p style={{ color: '#c4a24e', fontSize: '0.7rem', fontFamily: "'DM Sans', sans-serif", marginTop: '4px' }}>
@@ -327,12 +329,12 @@ export default function FinalQuote({
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '10px', flexWrap: 'wrap' }}>
                             <div className='text-center'>
                                 <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#6f6f66', marginBottom: '1px' }}>Per Item</div>
-                                <div style={{ fontFamily: "'Poppins', sans-serif", fontSize: '1.3rem', fontWeight: 700, color: '#0a0a0a' }}>${pricePerItem.toFixed(2)}</div>
+                                <div style={{ fontFamily: "'Poppins', sans-serif", fontSize: '1.3rem', fontWeight: 700, color: '#0a0a0a' }}>{quote?.quotable ? `$${pricePerItem.toFixed(2)}` : '—'}</div>
                             </div>
                             <div style={{ width: '1px', background: 'rgba(26,31,20,0.1)', alignSelf: 'stretch' }} />
                             <div className='text-center'>
                                 <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#6f6f66', marginBottom: '1px' }}>Total Quote</div>
-                                <div style={{ fontFamily: "'Poppins', sans-serif", fontSize: '1.3rem', fontWeight: 700, color: '#005a8f' }}>${totalPrice.toFixed(2)}</div>
+                                <div style={{ fontFamily: "'Poppins', sans-serif", fontSize: '1.3rem', fontWeight: 700, color: '#005a8f' }}>{quote?.quotable ? `$${totalPrice.toFixed(2)}` : 'By quote'}</div>
                             </div>
                             <div style={{ width: '1px', background: 'rgba(26,31,20,0.1)', alignSelf: 'stretch' }} />
                             <div className='text-center'>
@@ -365,7 +367,7 @@ export default function FinalQuote({
                                                             <button onClick={() => handleSizeChange(size, 1)} style={{ width: '18px', height: '18px', borderRadius: '3px', border: '1px solid rgba(0, 122, 195, 0.3)', background: 'rgba(0, 122, 195, 0.15)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.7rem', color: '#005a8f', padding: 0, lineHeight: 1 }}>+</button>
                                                         </div>
                                                     </td>
-                                                    <td style={{ padding: '4px 0', textAlign: 'right', color: qty > 0 ? '#0a0a0a' : '#6f6f66', fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}>${(qty * pricePerItem).toFixed(2)}</td>
+                                                    <td style={{ padding: '4px 0', textAlign: 'right', color: qty > 0 ? '#0a0a0a' : '#6f6f66', fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}>{quote?.quotable ? `$${(qty * pricePerItem).toFixed(2)}` : '—'}</td>
                                                 </tr>
                                             );
                                         })}
