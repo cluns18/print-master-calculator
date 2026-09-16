@@ -1,13 +1,13 @@
 import React from 'react';
 import NavBtn from '../components/NavBtn';
 
-const OBG_LOGO = 'https://olivebranchapparel.co/cdn/shop/files/OliveBranchLogo7-22-24_800x800_4c028e5b-777e-482f-b913-7dea35212eb5.png';
+const SHOP_LOGO = 'https://cdn.shopify.com/s/files/1/0978/3335/3492/files/printmaster-logo-header-blue.png';
 
 const IntroSlide = ({ selectedProject, setSelectedProject, onNext }) => {
     return (
         <>
             <div className='slide-header'>
-                <img src={OBG_LOGO} alt='Olive Branch' className='intro-logo' style={{ width: '64px', height: 'auto', margin: '0 auto 12px' }} />
+                <img src={SHOP_LOGO} alt='PrintMaster' className='intro-logo' style={{ width: '150px', height: 'auto', margin: '0 auto 12px' }} />
                 <h1 className='text-3xl font-bold headingColor'>Let's Build Your Custom Order</h1>
                 <p className='mt-1 text-sm bodyColor'>
                     Walk through a few quick steps and we'll put together a quote for you.
