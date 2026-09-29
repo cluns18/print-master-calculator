@@ -3,14 +3,29 @@ import './App.css';
 import IntroSlide from './pages/IntroSlide';
 import SPGarmentSelect from './pages/SPGarmentSelect';
 import EmbGarmentSelect from './pages/EmbGarmentSelect';
-import SPtshirtGarmentSelect from './pages/SPtshirtGarmentSelect';
-import SPLongSleeveGarmentSelect from './pages/SPLongSleeveGarmentSelect';
-import SPHoodieGarmentSelect from './pages/SPHoodieGarmentSelect';
-import SPPoloGarmentSelect from './pages/SPPoloGarmentSelect';
-import EmbSweatshirtGarmentSelect from './pages/EmbSweatshirtGarmentSelect';
-import EmbPoloGarmentSelect from './pages/EmbPoloGarmentSelect';
-import EmbHatGarmentSelect from './pages/EmbHatGarmentSelect';
+import GarmentPickSlide from './pages/GarmentPickSlide';
 import ColorSelect from './pages/ColorSelect';
+import tshirtGarments from './garments/tshirts';
+import longSleeveGarments from './garments/longsleeves';
+import hoodieGarments from './garments/hoodies';
+import poloGarments from './garments/polos';
+import hatGarments from './garments/hats';
+
+// The hand-built shortlist per type, shown only when the live catalog is off or
+// fails to load, so the garment step never goes dark.
+const FALLBACK_GARMENTS = {
+  sptshirt: Object.values(tshirtGarments),
+  splongsleeve: Object.values(longSleeveGarments),
+  sphoodie: Object.values(hoodieGarments),
+  sppolo: Object.values(poloGarments),
+  embsweatshirt: Object.values(hoodieGarments),
+  embpolo: Object.values(poloGarments),
+  embhat: Object.values(hatGarments),
+};
+const TYPE_NAMES = {
+  sptshirt: 'T-Shirt', splongsleeve: 'Long Sleeve', sphoodie: 'Hoodie', sppolo: 'Polo',
+  embsweatshirt: 'Sweatshirt', embpolo: 'Polo', embhat: 'Hat',
+};
 import ArtworkSelect from './pages/ArtworkSelect';
 import LocationSelect from './pages/LocationSelect';
 import SPLocationSelect from './pages/SPLocationSelect';
@@ -53,10 +68,7 @@ function App() {
     else if (currentSlide === 'embGarment' && !selectedGarment) {
       isValid = false;
     }
-    else if ((currentSlide === 'spTshirtGarment' || currentSlide === 'spLongSleeveGarment' || currentSlide === 'spHoodieGarment' || currentSlide === 'spPoloGarment') && !selectedSPGarment) {
-      isValid = false;
-    }
-    else if ((currentSlide === 'embSweatshirtGarment' || currentSlide === 'embPoloGarment' || currentSlide === 'embHatGarment') && !selectedEmbGarment) {
+    else if (currentSlide === 'garmentPick' && !(selectedProject === 'screenPrinting' ? selectedSPGarment : selectedEmbGarment)) {
       isValid = false;
     }
     else if (currentSlide === 'colorSelect' && !selectedColor) {
@@ -83,21 +95,10 @@ function App() {
     if (currentSlide === 'intro') {
       nextSlide = selectedProject === 'screenPrinting' ? 'spGarment' : 'embGarment';
     }
-    else if (currentSlide === 'spGarment' && selectedGarment) {
-      if (selectedGarment.id === 'sptshirt') nextSlide = 'spTshirtGarment';
-      else if (selectedGarment.id === 'splongsleeve') nextSlide = 'spLongSleeveGarment';
-      else if (selectedGarment.id === 'sphoodie') nextSlide = 'spHoodieGarment';
-      else if (selectedGarment.id === 'sppolo') nextSlide = 'spPoloGarment';
+    else if ((currentSlide === 'spGarment' || currentSlide === 'embGarment') && selectedGarment) {
+      nextSlide = 'garmentPick';
     }
-    else if (currentSlide === 'embGarment' && selectedGarment) {
-      if (selectedGarment.id === 'embsweatshirt') nextSlide = 'embSweatshirtGarment';
-      else if (selectedGarment.id === 'embpolo') nextSlide = 'embPoloGarment';
-      else if (selectedGarment.id === 'embhat') nextSlide = 'embHatGarment';
-    }
-    else if (currentSlide === 'spTshirtGarment' || currentSlide === 'spLongSleeveGarment' || currentSlide === 'spHoodieGarment' || currentSlide === 'spPoloGarment') {
-      nextSlide = 'colorSelect';
-    }
-    else if (currentSlide === 'embSweatshirtGarment' || currentSlide === 'embPoloGarment' || currentSlide === 'embHatGarment') {
+    else if (currentSlide === 'garmentPick') {
       nextSlide = 'colorSelect';
     }
     else if (currentSlide === 'colorSelect') {
@@ -154,13 +155,7 @@ function App() {
       intro: '1 - Project Type',
       spGarment: '2 - Garment Type',
       embGarment: '2 - Garment Type',
-      spTshirtGarment: '3 - Garment Select',
-      spLongSleeveGarment: '3 - Garment Select',
-      spHoodieGarment: '3 - Garment Select',
-      spPoloGarment: '3 - Garment Select',
-      embSweatshirtGarment: '3 - Garment Select',
-      embPoloGarment: '3 - Garment Select',
-      embHatGarment: '3 - Garment Select',
+      garmentPick: '3 - Garment Select',
       colorSelect: '4 - Color',
       artworkSelect: '5 - Artwork',
       locationSelect: '6 - Placement',
@@ -201,38 +196,6 @@ function App() {
             setSelectedGarment={setSelectedGarment}
           />
         )}
-        {currentSlide === 'spTshirtGarment' && (
-          <SPtshirtGarmentSelect
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            selectedSPGarment={selectedSPGarment}
-            setSelectedSPGarment={setSelectedSPGarment}
-          />
-        )}
-        {currentSlide === 'spLongSleeveGarment' && (
-          <SPLongSleeveGarmentSelect
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            selectedSPGarment={selectedSPGarment}
-            setSelectedSPGarment={setSelectedSPGarment}
-          />
-        )}
-        {currentSlide === 'spHoodieGarment' && (
-          <SPHoodieGarmentSelect
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            selectedSPGarment={selectedSPGarment}
-            setSelectedSPGarment={setSelectedSPGarment}
-          />
-        )}
-        {currentSlide === 'spPoloGarment' && (
-          <SPPoloGarmentSelect
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            selectedSPGarment={selectedSPGarment}
-            setSelectedSPGarment={setSelectedSPGarment}
-          />
-        )}
         {currentSlide === 'embGarment' && (
           <EmbGarmentSelect
             onNext={handleNext}
@@ -241,28 +204,21 @@ function App() {
             setSelectedGarment={setSelectedGarment}
           />
         )}
-        {currentSlide === 'embSweatshirtGarment' && (
-          <EmbSweatshirtGarmentSelect
+        {currentSlide === 'garmentPick' && selectedGarment && (
+          <GarmentPickSlide
+            key={selectedGarment.id}
+            typeId={selectedGarment.id}
+            typeName={TYPE_NAMES[selectedGarment.id] || selectedGarment.name}
+            fallbackGarments={FALLBACK_GARMENTS[selectedGarment.id] || []}
+            selected={selectedProject === 'screenPrinting' ? selectedSPGarment : selectedEmbGarment}
+            setSelected={(g) => {
+              // A new garment means a new set of colorways, so the old colour pick
+              // must not ride along into the colour step.
+              setSelectedColor(null);
+              if (selectedProject === 'screenPrinting') setSelectedSPGarment(g); else setSelectedEmbGarment(g);
+            }}
             onNext={handleNext}
             onPrevious={handlePrevious}
-            selectedEmbGarment={selectedEmbGarment}
-            setSelectedEmbGarment={setSelectedEmbGarment}
-          />
-        )}
-        {currentSlide === 'embPoloGarment' && (
-          <EmbPoloGarmentSelect
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            selectedEmbGarment={selectedEmbGarment}
-            setSelectedEmbGarment={setSelectedEmbGarment}
-          />
-        )}
-        {currentSlide === 'embHatGarment' && (
-          <EmbHatGarmentSelect
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            selectedEmbGarment={selectedEmbGarment}
-            setSelectedEmbGarment={setSelectedEmbGarment}
           />
         )}
         {currentSlide === 'colorSelect' && (
