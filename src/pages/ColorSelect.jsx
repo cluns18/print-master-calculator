@@ -7,7 +7,13 @@ import poloGarments from '../garments/polos';
 import hatGarments from '../garments/hats';
 
 export default function ColorSelect({ onNext, onPrevious, selectedSPGarment, selectedEmbGarment, selectedColor, setSelectedColor }) {
-    const garmentData = selectedSPGarment
+    // The picked garment carries its own colorways whether it came from the live
+    // catalog (mapRow) or the hand-built modules, so read them off the pick itself
+    // and only fall back to the module lookup for an old-shape selection.
+    const picked = selectedSPGarment || selectedEmbGarment;
+    const garmentData = picked?.colors?.length
+        ? picked
+        : selectedSPGarment
         ? (tshirtGarments[selectedSPGarment.id] || longSleeveGarments[selectedSPGarment.id] || hoodieGarments[selectedSPGarment.id] || poloGarments[selectedSPGarment.id])
         : selectedEmbGarment
         ? (hoodieGarments[selectedEmbGarment.id] || poloGarments[selectedEmbGarment.id] || hatGarments[selectedEmbGarment.id])

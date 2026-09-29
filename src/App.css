@@ -308,3 +308,119 @@ html, body { background: #0a0a0a; }
     .counter-pill span:first-child { font-size: 0.7rem !important; }
     .counter-pill span:last-child { font-size: 0.8rem !important; }
 }
+
+/* ── Garment picker (2026-09-29): three reasoned picks + the whole catalog,
+      styled after the Olive Branch Apparel Design Studio's garment step ── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.pick-content { justify-content: flex-start; gap: 8px; padding-top: 14px; }
+.pick-sub { color: #d6d3ca; }
+.pick-note { font-family: 'DM Sans', sans-serif; font-size: 0.9rem; text-align: center; margin: 8px 0; color: #d6d3ca; }
+.pick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+  padding: 12px 2px 4px;
+}
+.pick-grid--catalog { padding: 12px 2px 2px; }
+.pick-picked { margin-bottom: 14px; }
+.pick-picked-label { font-family: 'Poppins', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-align: center; margin: 0 0 6px; color: #e9ce32; }
+.pick-grid--picked { grid-template-columns: minmax(0, 300px); justify-content: center; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.pick-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+  padding: 20px 14px 14px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: #1a1a1a;
+  color: #f0ede4;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.pick-card:hover { border-color: rgba(255, 255, 255, 0.35); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); }
+.pick-card.is-active { border-color: #e9ce32; box-shadow: 0 0 0 3px rgba(233, 206, 50, 0.22), 0 8px 24px rgba(0, 0, 0, 0.45); transform: scale(1.015); }
+.pick-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: #e9ce32;
+  color: #0a0a0a;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.pick-card-img { width: 100%; height: 170px; display: flex; align-items: center; justify-content: center; background: #f4f1ea; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+.pick-card-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.pick-card-noimg { font-size: 0.72rem; color: #5a5a54; }
+.pick-card-brand { font-family: 'Poppins', sans-serif; font-size: 0.64rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #d6d3ca; }
+.pick-card-style { font-family: 'Poppins', sans-serif; font-size: 1.02rem; font-weight: 700; line-height: 1.15; margin-top: 2px; color: #f0ede4; }
+.pick-card-head { font-size: 0.84rem; font-weight: 700; margin-top: 6px; color: #3b8ecc; }
+.pick-card-title { font-size: 0.8rem; font-weight: 600; line-height: 1.25; margin-top: 4px; color: #f0ede4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pick-card-blurb { font-size: 0.74rem; line-height: 1.3; margin-top: 2px; color: #d6d3ca; }
+.pick-card-bullets { list-style: none; padding: 0; margin: 8px 0 0; text-align: left; display: grid; gap: 5px; width: 100%; }
+.pick-card-bullets li { display: flex; gap: 6px; font-size: 0.78rem; line-height: 1.35; color: #f0ede4; }
+.pick-check { width: 12px; height: 12px; flex-shrink: 0; margin-top: 3px; color: #3b8ecc; }
+.pick-card-tick { position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; border-radius: 50%; background: #e9ce32; color: #0a0a0a; display: flex; align-items: center; justify-content: center; }
+.pick-card-tick .pick-check { width: 12px; height: 12px; margin: 0; color: #0a0a0a; }
+.pick-card-foot { margin-top: auto; padding-top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.pick-swatches { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; }
+.pick-swatch { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.35); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3); }
+.pick-swatch-more { font-size: 0.7rem; font-weight: 700; margin-left: 2px; color: #f0ede4; }
+.pick-card-count { font-size: 0.7rem; color: #d6d3ca; }
+.price-tier { font-family: 'Poppins', sans-serif; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; line-height: 1; }
+.price-tier-on { color: #e9ce32; }
+.price-tier-off { color: transparent; -webkit-text-stroke: 1px rgba(233, 206, 50, 0.6); }
+.pick-actions { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 12px 0 8px; }
+.pick-actions-note { font-size: 0.78rem; margin: 0; color: #d6d3ca; }
+.catalog-open {
+  min-height: 42px;
+  padding: 10px 22px;
+  border: 2px solid #007ac3;
+  border-radius: 999px;
+  background: transparent;
+  color: #f0ede4;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.catalog-open:hover { background: #007ac3; border-color: #3b8ecc; }
+.catalog-search {
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+}
+.catalog-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; font-size: 0.85rem; color: #f0ede4; }
+.catalog-pager button { min-height: 40px; padding: 8px 14px; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 999px; background: transparent; color: #f0ede4; font-family: 'Poppins', sans-serif; font-weight: 600; cursor: pointer; }
+.catalog-pager button:hover:not(:disabled) { border-color: #007ac3; background: rgba(0, 122, 195, 0.2); }
+.catalog-pager button:disabled { visibility: hidden; }
+@media (max-width: 767px) {
+  .pick-grid { grid-template-columns: 1fr; gap: 16px; }
+  .pick-grid--catalog { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .pick-grid--picked { grid-template-columns: minmax(0, 1fr); }
+  .pick-card-img { height: 120px; }
+  .pick-grid--catalog .pick-card-bullets { display: none; }
+  .pick-grid--catalog .pick-card { padding: 16px 8px 10px; }
+}
