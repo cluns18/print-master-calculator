@@ -4,6 +4,7 @@ import calculateFinalQuote from '../utils/functions';
 import { sendQuote, clean, escName, artworkStatus } from '../utils/quoteDelivery';
 import { throttle } from 'lodash';
 import SHOP_CONFIG from '../config/shop';
+import { SP_PLACEMENTS } from './SPLocationSelect';
 
 const GARMENT_SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
 const HAT_GARMENTS = ['embhat'];
@@ -21,11 +22,13 @@ export default function FinalQuote({
 
     const garmentLabel = selectedSPGarment?.label || selectedSPGarment?.name || selectedEmbGarment?.label || selectedEmbGarment?.name || selectedGarment?.name || '';
     const colorName = typeof selectedColor === 'object' && selectedColor !== null ? selectedColor.name : selectedColor || '';
-    const LOCATION_LABELS = {
-        left_chest: 'Left Chest / Sleeve / Hat',
-        full_back: 'Full Back',
-        names: 'Names / Personalization',
-    };
+    const LOCATION_LABELS = selectedProject === 'screenPrinting'
+        ? Object.fromEntries(SP_PLACEMENTS.map((p) => [p.key, p.label]))
+        : {
+            left_chest: 'Left Chest / Sleeve / Hat',
+            full_back: 'Full Back',
+            names: 'Names / Personalization',
+        };
     const locationList = selectedLocation?.length > 0
         ? selectedLocation.map((k) => LOCATION_LABELS[k] || k).join(', ')
         : '';
@@ -55,7 +58,7 @@ export default function FinalQuote({
     const fetchQuote = useCallback(throttle(async (qty) => {
         const result = await calculateFinalQuote(
             selectedGarment, qty,
-            { selectedProject, selectedLocation, digitizing }
+            { selectedProject, selectedLocation, digitizing, locationColorCounts, selectedColor }
         );
         setQuote(result);
         if (result?.quotable) {
@@ -69,7 +72,7 @@ export default function FinalQuote({
             setTotalPrice(0);
             setFinalQuote({ pricePerItem: 0, totalPrice: 0, quantity: qty, errorCode: result?.errorCode });
         }
-    }, 200), [selectedProject, selectedGarment, selectedLocation, digitizing, setFinalQuote]);
+    }, 200), [selectedProject, selectedGarment, selectedLocation, digitizing, locationColorCounts, selectedColor, setFinalQuote]);
 
     useEffect(() => { fetchQuote(quantity); }, [quantity, fetchQuote]);
 
@@ -107,17 +110,37 @@ export default function FinalQuote({
     // --- Decoration / set-up detail for the shop's lead email ---
     // Kevin prices a flat rate per placement by quantity tier, so the useful detail is the
     // per-placement rate and the one-time set-up, not a colour or stitch count.
+    // Screen print (Kevin's 2026-09-29 sheet): per placement colours + underbase = screens at
+    // the per-piece rate, then the one-time screen fees. Underbase is the fleet rule, not
+    // something Kevin has confirmed, so it is spelled out in the email rather than hidden.
+    const spLineText = (l) =>
+        `${l.label}: ${l.colors} ${l.colors === 1 ? 'color' : 'colors'}${l.underbase ? ' + white underbase' : ''} = ${l.screens} ${l.screens === 1 ? 'screen' : 'screens'}`;
+    const spReasonText = {
+        SP_BELOW_MIN: `Screen print - below the ${MOQ} piece minimum, quote by hand`,
+        SP_OVER_MAX: 'Screen print - over 500 pieces, above the sheet, quote by hand',
+        SP_OVER_SCREENS: quote?.lines
+            ? `Screen print - ${quote.screensRequired} screens needed on one placement (sheet stops at ${quote.maxScreens}), quote by hand | ${quote.lines.map(spLineText).join(' + ')}`
+            : 'Screen print - too many screens, quote by hand',
+        SP_MATRIX_MISSING: 'Screen print - priced by hand, no online rate',
+    };
     const inkDetails = quote?.quotable
-        ? [
-            quote.lines
-                .map((l) => `${l.label} @ $${l.perPiece.toFixed(2)}/pc${l.primary ? '' : ' (2nd placement, 1/2 price)'}`)
-                .join(' + '),
-            `Set-up: ${quote.setupLabel}${quote.setupFee ? ` ($${quote.setupFee})` : ' (no charge)'}`,
-            `Tier: ${quote.tier}`,
-            'DECORATION ONLY - garments quoted separately',
-          ].join(' | ')
+        ? quote.service === 'screenPrinting'
+            ? [
+                quote.lines.map((l) => `${spLineText(l)} @ $${l.rate.toFixed(2)}/pc`).join(' + '),
+                `Screens: ${quote.screens} x $${quote.screenFee} = $${quote.screenFees.toFixed(2)} one-time`,
+                `Tier: ${quote.tier}`,
+                'DECORATION ONLY - garments quoted separately',
+              ].join(' | ')
+            : [
+                quote.lines
+                    .map((l) => `${l.label} @ $${l.perPiece.toFixed(2)}/pc${l.primary ? '' : ' (2nd placement, 1/2 price)'}`)
+                    .join(' + '),
+                `Set-up: ${quote.setupLabel}${quote.setupFee ? ` ($${quote.setupFee})` : ' (no charge)'}`,
+                `Tier: ${quote.tier}`,
+                'DECORATION ONLY - garments quoted separately',
+              ].join(' | ')
         : selectedProject === 'screenPrinting'
-            ? 'Screen print - priced by hand, no online rate'
+            ? (spReasonText[quote?.errorCode] || 'Screen print - could not price online, quote by hand')
             : 'Incomplete selection';
 
     // --- Artwork status ---
@@ -186,20 +209,32 @@ export default function FinalQuote({
                 </p>
             </div>
             <div className='slide-content final-quote-content'>
-                {/* Service we cannot price online. Never show a guessed or $0 number;
+                {/* Screen print we cannot price online. Never show a guessed or $0 number;
                     the lead is still captured and emailed to the shop. */}
-                {quote && !quote.quotable && quote.errorCode === 'SP_MATRIX_MISSING' && (
+                {quote && !quote.quotable && ['SP_OVER_SCREENS', 'SP_OVER_MAX', 'SP_BELOW_MIN', 'SP_MATRIX_MISSING'].includes(quote.errorCode) && (
                     <div style={{
                         background: 'rgba(233,206,50,0.12)', border: '1px solid rgba(233,206,50,0.35)',
                         borderRadius: '8px', padding: '10px 14px', marginBottom: '10px',
                     }}>
                         <p style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: '0.8rem', color: '#e9ce32', margin: 0 }}>
-                            Screen print is priced by hand
+                            {quote.errorCode === 'SP_OVER_SCREENS' && 'That many colors needs a hand quote'}
+                            {quote.errorCode === 'SP_OVER_MAX' && 'Over 500 pieces? We price that personally'}
+                            {quote.errorCode === 'SP_BELOW_MIN' && `Screen print starts at ${MOQ} pieces`}
+                            {quote.errorCode === 'SP_MATRIX_MISSING' && 'Screen print is priced by hand'}
                         </p>
                         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '0.72rem', color: '#f0ede4', margin: '4px 0 0', lineHeight: 1.5 }}>
-                            Screen print pricing depends on ink colours and placement, so we quote it
-                            personally rather than guess. Send your details below and we'll come back with a
-                            real number, or call {SHOP_CONFIG.shop_phone}. {MOQ} piece minimum.
+                            {quote.errorCode === 'SP_OVER_SCREENS' && (
+                                <>Our online pricing covers up to {quote.maxScreens} screens per placement and this design needs {quote.screensRequired}{quote.needsUnderbase ? ' (a dark garment adds a white underbase screen)' : ''}. Drop a color, pick a lighter garment, or send it through and we'll price it by hand. Or call {SHOP_CONFIG.shop_phone}.</>
+                            )}
+                            {quote.errorCode === 'SP_OVER_MAX' && (
+                                <>Big runs get better numbers than any chart. Send your details below and we'll come back with a real quote, or call {SHOP_CONFIG.shop_phone}.</>
+                            )}
+                            {quote.errorCode === 'SP_BELOW_MIN' && (
+                                <>Bump the quantity to {MOQ} or more to see a price. Under that, send it through and we'll talk options, or call {SHOP_CONFIG.shop_phone}.</>
+                            )}
+                            {quote.errorCode === 'SP_MATRIX_MISSING' && (
+                                <>Send your details below and we'll come back with a real number, or call {SHOP_CONFIG.shop_phone}. {MOQ} piece minimum.</>
+                            )}
                         </p>
                     </div>
                 )}
@@ -210,7 +245,9 @@ export default function FinalQuote({
                         fontFamily: "'DM Sans', sans-serif", fontSize: '0.68rem',
                         color: 'rgba(240,237,228,0.75)', textAlign: 'center', margin: '0 0 6px',
                     }}>
-                        Embroidery price shown is for decoration. Garments quoted separately.
+                        {quote.service === 'screenPrinting'
+                            ? `Print price shown is for decoration and includes $${quote.screenFees.toFixed(2)} in screen fees. Garments quoted separately.`
+                            : 'Embroidery price shown is for decoration. Garments quoted separately.'}
                     </p>
                 )}
 
@@ -329,7 +366,7 @@ export default function FinalQuote({
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '10px', flexWrap: 'wrap' }}>
                             <div className='text-center'>
                                 <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#6f6f66', marginBottom: '1px' }}>Per Item</div>
-                                <div style={{ fontFamily: "'Poppins', sans-serif", fontSize: '1.3rem', fontWeight: 700, color: '#0a0a0a' }}>{quote?.quotable ? `$${pricePerItem.toFixed(2)}` : '—'}</div>
+                                <div style={{ fontFamily: "'Poppins', sans-serif", fontSize: '1.3rem', fontWeight: 700, color: '#0a0a0a' }}>{quote?.quotable ? `$${pricePerItem.toFixed(2)}` : '-'}</div>
                             </div>
                             <div style={{ width: '1px', background: 'rgba(26,31,20,0.1)', alignSelf: 'stretch' }} />
                             <div className='text-center'>
@@ -367,7 +404,7 @@ export default function FinalQuote({
                                                             <button onClick={() => handleSizeChange(size, 1)} style={{ width: '18px', height: '18px', borderRadius: '3px', border: '1px solid rgba(0, 122, 195, 0.3)', background: 'rgba(0, 122, 195, 0.15)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.7rem', color: '#005a8f', padding: 0, lineHeight: 1 }}>+</button>
                                                         </div>
                                                     </td>
-                                                    <td style={{ padding: '4px 0', textAlign: 'right', color: qty > 0 ? '#0a0a0a' : '#6f6f66', fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}>{quote?.quotable ? `$${(qty * pricePerItem).toFixed(2)}` : '—'}</td>
+                                                    <td style={{ padding: '4px 0', textAlign: 'right', color: qty > 0 ? '#0a0a0a' : '#6f6f66', fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}>{quote?.quotable ? `$${(qty * pricePerItem).toFixed(2)}` : '-'}</td>
                                                 </tr>
                                             );
                                         })}
