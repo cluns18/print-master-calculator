@@ -13,6 +13,7 @@ import EmbHatGarmentSelect from './pages/EmbHatGarmentSelect';
 import ColorSelect from './pages/ColorSelect';
 import ArtworkSelect from './pages/ArtworkSelect';
 import LocationSelect from './pages/LocationSelect';
+import SPLocationSelect from './pages/SPLocationSelect';
 import ColorCount from './pages/ColorCount';
 import DigitizingSelect from './pages/DigitizingSelect';
 import FinalQuote from './pages/FinalQuote';
@@ -64,7 +65,7 @@ function App() {
     else if (currentSlide === 'artworkSelect' && !(selectedArtwork || artworkDescription)) {
       isValid = false;
     }
-    else if (currentSlide === 'locationSelect' && selectedLocation.length === 0) {
+    else if ((currentSlide === 'locationSelect' || currentSlide === 'spLocationSelect') && selectedLocation.length === 0) {
       isValid = false;
     }
     else if (currentSlide === 'digitizing' && !digitizing) {
@@ -103,10 +104,15 @@ function App() {
       nextSlide = 'artworkSelect';
     }
     else if (currentSlide === 'artworkSelect') {
-      // Screen print has no pricing matrix from the shop, so there is nothing for the
-      // placement/colour steps to price. Go straight to the quote screen, which captures
-      // the lead and tells the customer PrintMaster will price it by hand.
-      nextSlide = selectedProject === 'screenPrinting' ? 'finalQuote' : 'locationSelect';
+      // Screen print: placements then ink colours per placement, priced off Kevin's
+      // 2026-09-29 sheet. Embroidery: his flat-rate placement rows then digitizing.
+      nextSlide = selectedProject === 'screenPrinting' ? 'spLocationSelect' : 'locationSelect';
+    }
+    else if (currentSlide === 'spLocationSelect') {
+      nextSlide = 'colorCount';
+    }
+    else if (currentSlide === 'colorCount') {
+      nextSlide = 'finalQuote';
     }
     else if (currentSlide === 'locationSelect') {
       nextSlide = 'digitizing';
@@ -132,7 +138,7 @@ function App() {
       if (previousSlide === 'embGarment') setSelectedEmbGarment(null);
       if (previousSlide === 'intro') setSelectedGarment(null);
       if (previousSlide === 'digitizing') setDigitizing(null);
-      if (previousSlide === 'locationSelect') {
+      if (previousSlide === 'locationSelect' || previousSlide === 'spLocationSelect') {
         setSelectedSpecialInks([]);
         setLocationColorCounts({});
       }
@@ -158,6 +164,8 @@ function App() {
       colorSelect: '4 - Color',
       artworkSelect: '5 - Artwork',
       locationSelect: '6 - Placement',
+      spLocationSelect: '6 - Placement',
+      colorCount: '7 - Ink Colors',
       digitizing: '7 - Artwork Set-Up',
       finalQuote: '8 - Quote',
       thankYou: '9 - Confirmation'
@@ -284,12 +292,21 @@ function App() {
             setSelectedLocation={setSelectedLocation}
           />
         )}
+        {currentSlide === 'spLocationSelect' && (
+          <SPLocationSelect
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+            selectedLocation={selectedLocation}
+            setSelectedLocation={setSelectedLocation}
+          />
+        )}
         {currentSlide === 'colorCount' && (
           <ColorCount
             onNext={handleNext}
             onPrevious={handlePrevious}
             selectedLocations={selectedLocation}
             setColorCounts={setLocationColorCounts}
+            needsUnderbase={Number(selectedColor?.underbase) === 1}
           />
         )}
         {currentSlide === 'digitizing' && (
