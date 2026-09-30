@@ -58,7 +58,8 @@ export default function FinalQuote({
     const fetchQuote = useCallback(throttle(async (qty) => {
         const result = await calculateFinalQuote(
             selectedGarment, qty,
-            { selectedProject, selectedLocation, digitizing, locationColorCounts, selectedColor }
+            { selectedProject, selectedLocation, digitizing, locationColorCounts, selectedColor,
+              pickedGarment: selectedProject === 'screenPrinting' ? selectedSPGarment : selectedEmbGarment }
         );
         setQuote(result);
         if (result?.quotable) {
@@ -72,7 +73,7 @@ export default function FinalQuote({
             setTotalPrice(0);
             setFinalQuote({ pricePerItem: 0, totalPrice: 0, quantity: qty, errorCode: result?.errorCode });
         }
-    }, 200), [selectedProject, selectedGarment, selectedLocation, digitizing, locationColorCounts, selectedColor, setFinalQuote]);
+    }, 200), [selectedProject, selectedGarment, selectedSPGarment, selectedEmbGarment, selectedLocation, digitizing, locationColorCounts, selectedColor, setFinalQuote]);
 
     useEffect(() => { fetchQuote(quantity); }, [quantity, fetchQuote]);
 
@@ -110,11 +111,11 @@ export default function FinalQuote({
     // --- Decoration / set-up detail for the shop's lead email ---
     // Kevin prices a flat rate per placement by quantity tier, so the useful detail is the
     // per-placement rate and the one-time set-up, not a colour or stitch count.
-    // Screen print (Kevin's 2026-09-29 sheet): per placement colours + underbase = screens at
-    // the per-piece rate, then the one-time screen fees. Underbase is the fleet rule, not
-    // something Kevin has confirmed, so it is spelled out in the email rather than hidden.
+    // Screen print (Kevin's 2026-09-29 updated matrix): one screen per colour per placement
+    // off the light or dark table, then the one-time screen fees. Kevin prices the white
+    // base into the dark table, so there is no underbase screen.
     const spLineText = (l) =>
-        `${l.label}: ${l.colors} ${l.colors === 1 ? 'color' : 'colors'}${l.underbase ? ' + white underbase' : ''} = ${l.screens} ${l.screens === 1 ? 'screen' : 'screens'}`;
+        `${l.label}: ${l.colors} ${l.colors === 1 ? 'color' : 'colors'} = ${l.screens} ${l.screens === 1 ? 'screen' : 'screens'}`;
     const spReasonText = {
         SP_BELOW_MIN: `Screen print - below the ${MOQ} piece minimum, quote by hand`,
         SP_OVER_MAX: 'Screen print - over 500 pieces, above the sheet, quote by hand',
@@ -128,8 +129,8 @@ export default function FinalQuote({
             ? [
                 quote.lines.map((l) => `${spLineText(l)} @ $${l.rate.toFixed(2)}/pc`).join(' + '),
                 `Screens: ${quote.screens} x $${quote.screenFee} = $${quote.screenFees.toFixed(2)} one-time`,
-                `Tier: ${quote.tier}`,
-                'DECORATION ONLY - garments quoted separately',
+                `Tier: ${quote.tier} (${quote.dark ? 'dark' : 'light'} garment pricing)`,
+                quote.garmentIncluded ? 'Blank included at wholesale x2' : 'DECORATION ONLY - garments quoted separately',
               ].join(' | ')
             : [
                 quote.lines
@@ -137,7 +138,7 @@ export default function FinalQuote({
                     .join(' + '),
                 `Set-up: ${quote.setupLabel}${quote.setupFee ? ` ($${quote.setupFee})` : ' (no charge)'}`,
                 `Tier: ${quote.tier}`,
-                'DECORATION ONLY - garments quoted separately',
+                quote.garmentIncluded ? 'Blank included at wholesale x2' : 'DECORATION ONLY - garments quoted separately',
               ].join(' | ')
         : selectedProject === 'screenPrinting'
             ? (spReasonText[quote?.errorCode] || 'Screen print - could not price online, quote by hand')
@@ -224,7 +225,7 @@ export default function FinalQuote({
                         </p>
                         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '0.72rem', color: '#f0ede4', margin: '4px 0 0', lineHeight: 1.5 }}>
                             {quote.errorCode === 'SP_OVER_SCREENS' && (
-                                <>Our online pricing covers up to {quote.maxScreens} screens per placement and this design needs {quote.screensRequired}{quote.needsUnderbase ? ' (a dark garment adds a white underbase screen)' : ''}. Drop a color, pick a lighter garment, or send it through and we'll price it by hand. Or call {SHOP_CONFIG.shop_phone}.</>
+                                <>Our online pricing covers up to {quote.maxScreens} colors per placement and this design needs {quote.screensRequired}. Drop a color, or send it through and we'll price it by hand. Or call {SHOP_CONFIG.shop_phone}.</>
                             )}
                             {quote.errorCode === 'SP_OVER_MAX' && (
                                 <>Big runs get better numbers than any chart. Send your details below and we'll come back with a real quote, or call {SHOP_CONFIG.shop_phone}.</>
@@ -239,7 +240,7 @@ export default function FinalQuote({
                     </div>
                 )}
 
-                {/* Kevin's sheet prices decoration only, so don't let the figure read as all-in. */}
+                {/* Without a blank cost the figure is decoration only, so don't let it read as all-in. */}
                 {quote?.quotable && quote.decorationOnly && (
                     <p style={{
                         fontFamily: "'DM Sans', sans-serif", fontSize: '0.68rem',

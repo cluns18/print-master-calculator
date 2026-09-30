@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import NavBtn from '../components/NavBtn';
 import { SP_PLACEMENTS } from './SPLocationSelect';
 
-// Kevin's sheet runs 1 to 6 screens per location and charges $25 a screen. A dark
-// garment takes a white underbase first, which is a real screen, so the picker caps
-// at 5 colours on a dark blank and 6 on a light one. The maths is shown inline so the
-// customer sees why a 2 colour print on black is 3 screens.
-const MAX_SCREENS = 6;
+// Kevin's sheet runs 1 to 6 colours per location and charges $25 a screen, one screen
+// per colour. Dark garments have their own price table with the white base already
+// in it (Kevin, 2026-09-29: "we do eat the cost of a base and do not charge for a base
+// screen"), so light and dark both cap at 6 and neither adds an underbase screen.
+const MAX_COLORS = 6;
 const SCREEN_FEE = 25;
 
 const labelFor = (key) => (SP_PLACEMENTS.find((p) => p.key === key) || {}).label || key;
 
-export default function ColorCount({ onNext, onPrevious, selectedLocations, setColorCounts, needsUnderbase = false }) {
+export default function ColorCount({ onNext, onPrevious, selectedLocations, setColorCounts }) {
     const [colorCounts, setLocalColorCounts] = useState({});
-    const maxColors = needsUnderbase ? MAX_SCREENS - 1 : MAX_SCREENS;
+    const maxColors = MAX_COLORS;
 
     useEffect(() => {
         const defaultCounts = {};
@@ -27,7 +27,7 @@ export default function ColorCount({ onNext, onPrevious, selectedLocations, setC
         setLocalColorCounts((prev) => ({ ...prev, [location]: Math.min(Math.max(value, 1), maxColors) }));
     };
 
-    const totalScreens = selectedLocations.reduce((sum, loc) => sum + (colorCounts[loc] || 1) + (needsUnderbase ? 1 : 0), 0);
+    const totalScreens = selectedLocations.reduce((sum, loc) => sum + (colorCounts[loc] || 1), 0);
 
     return (
         <>
@@ -35,14 +35,13 @@ export default function ColorCount({ onNext, onPrevious, selectedLocations, setC
                 <h1 className='text-3xl font-bold headingColor'>How Many Ink Colors?</h1>
                 <p className='mt-1 text-sm bodyColor'>
                     Each color is a screen, and screens are ${SCREEN_FEE} each, one time per order.
-                    {needsUnderbase ? ' Your garment color is dark, so it gets a white underbase screen first.' : ''}
                 </p>
             </div>
             <div className='slide-content'>
                 <div>
                     {selectedLocations.map((location) => {
                         const colors = colorCounts[location] || 1;
-                        const screens = colors + (needsUnderbase ? 1 : 0);
+                        const screens = colors;
                         return (
                             <div key={location} className='mt-4 text-left'>
                                 <label className='text-lg font-semibold bodyColor'>{labelFor(location)}</label>
@@ -58,7 +57,7 @@ export default function ColorCount({ onNext, onPrevious, selectedLocations, setC
                                         onChange={(e) => handleColorChange(location, parseInt(e.target.value))} className='w-full cursor-pointer' />
                                 </div>
                                 <p className='text-xs bodyColor mt-1'>
-                                    {colors} {colors === 1 ? 'color' : 'colors'}{needsUnderbase ? ' + white underbase' : ''} = {screens} {screens === 1 ? 'screen' : 'screens'}
+                                    {colors} {colors === 1 ? 'color' : 'colors'} = {screens} {screens === 1 ? 'screen' : 'screens'}
                                 </p>
                             </div>
                         );

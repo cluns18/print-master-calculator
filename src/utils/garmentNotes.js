@@ -5,13 +5,21 @@
 // (src/lib/garment-notes.ts there) and the Missouri calculator, so every path
 // recommends the same three blanks.
 
-// KEVIN'S OWN PICKS GO HERE. On the 2026-09-29 call Kevin said he would send his
-// good / better / best garments per type and his markup. Until that lands this is
-// null and the OBG defaults in RECOMMENDED stand. When it arrives, fill it like
-// { tshirt: ['gildan-5000', 'bella-canvas-3001', 'comfort-colors-1717'], ... }
-// using calculator_catalog slugs, and every type listed here overrides RECOMMENDED.
-// Any slug without a GARMENT_NOTES entry still renders (S&S title + blurb + tier).
-export const PRINTMASTER_PICKS = null;
+// KEVIN'S OWN PICKS, good / better / best, emailed 2026-09-29 22:09Z (msg
+// 1a0ef37143f05330). Every type listed here overrides RECOMMENDED. He flagged three as
+// SanMar. Nike NKDC1963 is also sold through S&S so it resolves; Sport-Tek F281 and
+// Port Authority K500 are SanMar-only and are NOT in calculator_catalog
+// (reference_sanmar_not_in_ss_catalog), so fetchRecommended pads those slots with the
+// most popular in-stock style of the type until they can be priced. They stay listed
+// so they appear the moment the catalog carries them.
+export const PRINTMASTER_PICKS = {
+    tshirt: ['gildan-5000', 'gildan-64000', 'comfort-colors-1717'],
+    longsleeve: ['gildan-5400', 'next-level-3601', 'comfort-colors-6014'],
+    hoodie: ['gildan-18500', 'independent-trading-co-ind4000', 'sport-tek-f281'],
+    sweatshirt: ['gildan-18500', 'independent-trading-co-ind4000', 'sport-tek-f281'],
+    polo: ['devon-jones-dg20', 'port-authority-k500', 'nike-nkdc1963'],
+    hat: ['richardson-112', 'flexfit-6277', 'yp-classics-1501kc'],
+};
 
 export const RECOMMENDED = {
     tshirt: ['gildan-5000', 'bella-canvas-3001', 'comfort-colors-1717'],
