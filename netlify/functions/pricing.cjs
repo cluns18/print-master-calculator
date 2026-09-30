@@ -18,9 +18,8 @@
 // + $25 PER SCREEN". It runs 12 to 500 pieces and 1 to 6 colours. Outside that the
 // calculator withholds the number rather than extrapolating.
 //
-// BOTH SHEETS ARE DECORATION ONLY. Neither carries a blank garment cost. Kevin said on
-// the 2026-09-29 call he will send his garment markup and good/better/best garment
-// picks; GARMENT_MARKUP below is the hook for that and stays null until he does.
+// Both sheets price decoration. Blanks come on top at Kevin's markup (GARMENT_MARKUP
+// below), sent the evening of the 2026-09-29 call with his good/better/best picks.
 
 // Bracketed tiers. min/max inclusive; max null == open ended.
 const EMBROIDERY_TIERS = [
@@ -66,10 +65,22 @@ const SCREEN_PRINT_TIERS = [
 ];
 
 // Per-piece decoration price PER LOCATION, rows indexed to SCREEN_PRINT_TIERS,
-// columns are 1 to 6 screens. Kevin's header says colours; the fleet standard
-// (reference_calculator_underbase_bug) indexes by SCREENS so a white underbase on a
-// dark garment costs its real screen. Column 0 = 1 screen ... column 5 = 6 screens.
-const SCREEN_PRINT_MATRIX = [
+// columns are 1 to 6 ink colours. Two tables since Kevin's "UPDATED PRICING
+// MATRIX.xlsx" (2026-09-29 22:09Z, msg 1a0ef37143f05330, saved at
+// print-master-site/client-inputs-2026-09-29/): the top table is LIGHT garments and
+// the bottom one DARK, which is byte-identical to the "SP Prices.xlsx" rows this file
+// carried before. Kevin: "Using the dark pricing list we do eat the cost of a base
+// and do not charge for a base screen." So the columns are colours, not screens, and
+// a dark garment never adds an underbase screen or a $25 fee for one.
+const SCREEN_PRINT_MATRIX_LIGHT = [
+    [3.82, 5.32, 5.98, 6.52, 6.75, 7.00],
+    [2.32, 3.82, 4.47, 5.03, 5.25, 5.50],
+    [1.51, 2.34, 3.30, 3.58, 3.71, 3.96],
+    [1.19, 1.78, 2.44, 2.57, 2.70, 2.94],
+    [0.98, 1.58, 1.98, 2.11, 2.24, 2.48],
+    [0.78, 1.32, 1.50, 1.74, 1.86, 2.10],
+];
+const SCREEN_PRINT_MATRIX_DARK = [
     [5.33, 5.98, 6.53, 6.79, 7.13, 7.50],
     [3.83, 4.48, 5.03, 5.25, 5.75, 6.00],
     [2.34, 3.30, 3.58, 3.71, 4.09, 4.46],
@@ -77,7 +88,7 @@ const SCREEN_PRINT_MATRIX = [
     [1.58, 1.98, 2.11, 2.24, 2.60, 2.96],
     [1.32, 1.60, 1.84, 1.99, 2.25, 2.46],
 ];
-const SCREEN_PRINT_MAX_SCREENS = 6;
+const SCREEN_PRINT_MAX_COLORS = 6;
 
 // "+ $25 PER SCREEN". A one-time order charge, one per screen across every location.
 const SCREEN_FEE = 25;
@@ -86,11 +97,11 @@ const SCREEN_PRINT_MIN_QTY = 12;   // Kevin, 2026-09-10 and the 2025-10-29 onboa
 const SCREEN_PRINT_MAX_QTY = 500;  // top row of the 2026-09-29 sheet
 const EMBROIDERY_MIN_QTY = 1;      // Kevin, 2026-09-10: "Embroidery = 1 piece minimum"
 
-// GARMENT HOOK. Kevin's sheets price decoration only. When he sends his garment
-// markup (a multiplier on blank cost, e.g. 1.5) set it here and add the garment line
-// in calculatePricing.cjs; until then every quote stays decorationOnly: true and the
-// quote screen says garments are quoted separately. Deliberately NOT implemented yet.
-const GARMENT_MARKUP = null;
+// "MARKUP ON BLANK APPAREL WHOLESALE PRICE X 2", the last line of Kevin's 2026-09-29
+// updated matrix. Applies to every blank, screen print and embroidery alike. The blank
+// cost is the S&S wholesale base_cost from the calculator_catalog view. It is folded
+// into the per-piece price and never shown on its own (feedback_never_show_garment_cost).
+const GARMENT_MARKUP = 2;
 
 // Screen print tier lookup. Returns null under the minimum or over the ceiling so a
 // caller can withhold the quote. Never clamps to the nearest row.
@@ -120,8 +131,9 @@ module.exports = {
     DIGITIZING,
     SCREEN_PRINT_AVAILABLE,
     SCREEN_PRINT_TIERS,
-    SCREEN_PRINT_MATRIX,
-    SCREEN_PRINT_MAX_SCREENS,
+    SCREEN_PRINT_MATRIX_LIGHT,
+    SCREEN_PRINT_MATRIX_DARK,
+    SCREEN_PRINT_MAX_COLORS,
     SCREEN_FEE,
     SCREEN_PRINT_MIN_QTY,
     SCREEN_PRINT_MAX_QTY,

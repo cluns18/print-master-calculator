@@ -10,10 +10,15 @@ const calculateFinalQuote = async (selectedGarment, quantity, {
     digitizing,
     locationColorCounts,
     selectedColor,
+    pickedGarment,
 }) => {
     if (!quantity) return { quotable: false, errorCode: 'INCOMPLETE' };
 
-    const body = { selectedProject, quantity, selectedLocation, digitizing };
+    // Live S&S wholesale cost of the picked blank, marked up on the server. Only catalog
+    // rows carry a current cost; the hand-built fallback list is March 2025 data, so a
+    // fallback pick quotes decoration only rather than on a stale blank price.
+    const selectedGarmentCost = pickedGarment?.fromCatalog && pickedGarment.cost > 0 ? pickedGarment.cost : 0;
+    const body = { selectedProject, quantity, selectedLocation, digitizing, selectedGarmentCost };
     if (selectedProject === 'screenPrinting') {
         // Placement keys become {key,label} for the email lines; the colour picked on
         // the garment carries the underbase flag (0 light, 1 dark).

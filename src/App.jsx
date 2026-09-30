@@ -262,7 +262,6 @@ function App() {
             onPrevious={handlePrevious}
             selectedLocations={selectedLocation}
             setColorCounts={setLocationColorCounts}
-            needsUnderbase={Number(selectedColor?.underbase) === 1}
           />
         )}
         {currentSlide === 'digitizing' && (
