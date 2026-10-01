@@ -11,6 +11,7 @@
 
 import { supabase, catalogEnabled } from '../lib/supabase';
 import { picksFor } from './garmentNotes';
+import { manualBySlug } from './manualGarments';
 
 export { catalogEnabled };
 
@@ -121,7 +122,8 @@ export async function fetchRecommended(typeId) {
         withRetry((signal) => supabase.from('calculator_catalog').select(SELECT).in('garment_type', types)
             .order('popularity_qty', { ascending: false }).order('base_cost', { ascending: true }).limit(6).abortSignal(signal)),
     ]);
-    const bySlug = new Map((curated.data || []).map((r) => [r.slug, r]));
+    // Kevin's SanMar picks are hand-entered rows; they slot in by slug like any other.
+    const bySlug = new Map([...manualBySlug(types), ...(curated.data || []).map((r) => [r.slug, r])]);
     const picked = slugs.map((s) => bySlug.get(s)).filter(Boolean);
     for (const r of popular.data || []) {
         if (picked.length >= 3) break;
