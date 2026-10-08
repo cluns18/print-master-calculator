@@ -107,6 +107,8 @@ q = sized({ L: 12, "2XL": 12 }, { selectedGarmentCost: 0 });
 check("h5. no blank cost, no size upcharge", q.quotable && q.decorationOnly && near(q.totalQuote, 141.68), `got ${q.totalQuote}`);
 q = buildQuote({ selectedProject: "embroidery", quantity: 24, selectedLocation: ["left_chest"], digitizing: "small", selectedGarmentCost: 10.04, garmentSlug: "port-authority-k500", sizeBreakdown: { L: 20, "3XL": 4 } });
 check("h6. embroidery K500 with four 3XL adds 4 x $6.00", q.quotable && near(q.totalQuote, 305 + 24 * 20.08 + 4 * 6), `got ${q.totalQuote}`);
+q = buildQuote({ selectedProject: "embroidery", quantity: 12, selectedLocation: ["left_chest"], digitizing: "small", selectedGarmentCost: 32, garmentSlug: "nike-nkdc1963", sizeBreakdown: { L: 10, "2XL": 2 } });
+check("h7. Nike NKDC1963 steps $1 at 2XL, x2", q.quotable && near(q.sizeAdders["2XL"], 2), JSON.stringify(q.sizeAdders));
 
 // (i) reorder with screens on file: no screen fees (Kevin, 2026-10-07). 24 x 3.82 = 91.68
 q = sp(24, [["front", "Front", 2]], 0);

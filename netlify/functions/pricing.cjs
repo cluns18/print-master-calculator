@@ -107,9 +107,13 @@ const GARMENT_MARKUP = 2;
 // so the S&S size table cannot know them. SanMar's case price steps up $1 at 2XL, $3 at
 // 3XL and $4 at 4XL on both styles (SanMar_SDL_N.csv, 2026-08-24), and Kevin's XS to XL
 // cost matches that file's case price to the cent, so the same steps ride on his cost.
+// The Nike NKDC1963 polo, Kevin's third polo pick, sits in the catalog without an S&S
+// styleID, so the size table misses it too. SanMar sells the same polo with the same
+// $1 / $3 / $4 steps, so it takes them rather than quoting a 3XL at the price of a medium.
 const MANUAL_SIZE_STEPS = {
     "sport-tek-f281": { "2XL": 1, "3XL": 3, "4XL": 4 },
     "port-authority-k500": { "2XL": 1, "3XL": 3, "4XL": 4 },
+    "nike-nkdc1963": { "2XL": 1, "3XL": 3, "4XL": 4 },
 };
 
 // Screen print tier lookup. Returns null under the minimum or over the ceiling so a
