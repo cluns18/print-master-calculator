@@ -77,6 +77,9 @@ function mapRow(row) {
         blurb: row.blurb || null,
         priceTier: Number(row.price_tier) || 1,
         cost: Number(row.base_cost),
+        // S&S styleID, what the server keys its 2XL and up costs on. Null for Kevin's
+        // hand-entered SanMar picks, which the server prices by slug.
+        styleId: row.ss_style_id || null,
         stockImage: large(row.image_url) || colors[0]?.image || null,
         colors,
         popularity: Number(row.popularity_qty || 0),
@@ -84,7 +87,7 @@ function mapRow(row) {
     };
 }
 
-const SELECT = 'id, slug, brand, style_name, style_number, base_cost, image_url, popularity_qty, colors, title, blurb, price_tier';
+const SELECT = 'id, ss_style_id, slug, brand, style_name, style_number, base_cost, image_url, popularity_qty, colors, title, blurb, price_tier';
 
 // Supabase hands back the occasional 503 when a project wakes up, so retry once, but
 // never let a dead connection hold the slide on "Loading" (supabase-js retries 503s on

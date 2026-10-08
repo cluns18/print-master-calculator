@@ -11,7 +11,7 @@ const SCREEN_FEE = 25;
 
 const labelFor = (key) => (SP_PLACEMENTS.find((p) => p.key === key) || {}).label || key;
 
-export default function ColorCount({ onNext, onPrevious, selectedLocations, setColorCounts }) {
+export default function ColorCount({ onNext, onPrevious, selectedLocations, setColorCounts, screensOnFile, setScreensOnFile }) {
     const [colorCounts, setLocalColorCounts] = useState({});
     const maxColors = MAX_COLORS;
 
@@ -62,8 +62,16 @@ export default function ColorCount({ onNext, onPrevious, selectedLocations, setC
                             </div>
                         );
                     })}
-                    <p className='text-sm headingColor mt-5'>
-                        {totalScreens} {totalScreens === 1 ? 'screen' : 'screens'} total, ${totalScreens * SCREEN_FEE} in screen fees on this order.
+                    {/* Kevin, 2026-10-07: "We don't charge a setup fee for reorders". */}
+                    <label className='flex items-center gap-3 mt-5 text-sm bodyColor text-left' style={{ cursor: 'pointer' }}>
+                        <input type='checkbox' checked={!!screensOnFile} onChange={(e) => setScreensOnFile(e.target.checked)}
+                            style={{ width: '18px', height: '18px', accentColor: '#007ac3', flexShrink: 0 }} />
+                        <span>This is a reorder and PrintMaster already has my screens on file</span>
+                    </label>
+                    <p className='text-sm headingColor mt-3'>
+                        {screensOnFile
+                            ? `${totalScreens} ${totalScreens === 1 ? 'screen' : 'screens'} on file, no screen fees on a reorder.`
+                            : `${totalScreens} ${totalScreens === 1 ? 'screen' : 'screens'} total, $${totalScreens * SCREEN_FEE} in screen fees on this order.`}
                     </p>
                 </div>
             </div>
