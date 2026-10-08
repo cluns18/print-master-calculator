@@ -103,6 +103,19 @@ const EMBROIDERY_MIN_QTY = 1;      // Kevin, 2026-09-10: "Embroidery = 1 piece m
 // into the per-piece price and never shown on its own (feedback_never_show_garment_cost).
 const GARMENT_MARKUP = 2;
 
+// Kevin's two SanMar picks are hand-entered at his own cost (src/utils/manualGarments.js),
+// so the S&S size table cannot know them. SanMar's case price steps up $1 at 2XL, $3 at
+// 3XL and $4 at 4XL on both styles (SanMar_SDL_N.csv, 2026-08-24), and Kevin's XS to XL
+// cost matches that file's case price to the cent, so the same steps ride on his cost.
+// The Nike NKDC1963 polo, Kevin's third polo pick, sits in the catalog without an S&S
+// styleID, so the size table misses it too. SanMar sells the same polo with the same
+// $1 / $3 / $4 steps, so it takes them rather than quoting a 3XL at the price of a medium.
+const MANUAL_SIZE_STEPS = {
+    "sport-tek-f281": { "2XL": 1, "3XL": 3, "4XL": 4 },
+    "port-authority-k500": { "2XL": 1, "3XL": 3, "4XL": 4 },
+    "nike-nkdc1963": { "2XL": 1, "3XL": 3, "4XL": 4 },
+};
+
 // Screen print tier lookup. Returns null under the minimum or over the ceiling so a
 // caller can withhold the quote. Never clamps to the nearest row.
 const spTierIndexForQuantity = (quantity) => {
@@ -139,6 +152,7 @@ module.exports = {
     SCREEN_PRINT_MAX_QTY,
     EMBROIDERY_MIN_QTY,
     GARMENT_MARKUP,
+    MANUAL_SIZE_STEPS,
     tierIndexForQuantity,
     spTierIndexForQuantity,
 };

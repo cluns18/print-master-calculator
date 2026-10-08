@@ -11,6 +11,8 @@ const calculateFinalQuote = async (selectedGarment, quantity, {
     locationColorCounts,
     selectedColor,
     pickedGarment,
+    sizeBreakdown,
+    screensOnFile,
 }) => {
     if (!quantity) return { quotable: false, errorCode: 'INCOMPLETE' };
 
@@ -19,6 +21,11 @@ const calculateFinalQuote = async (selectedGarment, quantity, {
     // fallback pick quotes decoration only rather than on a stale blank price.
     const selectedGarmentCost = pickedGarment?.fromCatalog && pickedGarment.cost > 0 ? pickedGarment.cost : 0;
     const body = { selectedProject, quantity, selectedLocation, digitizing, selectedGarmentCost };
+    // 2XL and up cost more. The server prices them from the style and the size breakdown,
+    // never from a per-size cost sent from here.
+    body.garmentStyleId = pickedGarment?.styleId || null;
+    body.garmentSlug = pickedGarment?.slug || null;
+    body.sizeBreakdown = sizeBreakdown || null;
     if (selectedProject === 'screenPrinting') {
         // Placement keys become {key,label} for the email lines; the colour picked on
         // the garment carries the underbase flag (0 light, 1 dark).
@@ -28,6 +35,7 @@ const calculateFinalQuote = async (selectedGarment, quantity, {
         }));
         body.locationColorCounts = locationColorCounts || {};
         body.garmentUnderbase = selectedColor?.underbase ?? 0;
+        body.screensOnFile = !!screensOnFile;
     }
 
     try {

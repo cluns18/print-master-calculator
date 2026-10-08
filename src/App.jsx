@@ -51,6 +51,8 @@ function App() {
   const [selectedSpecialInks, setSelectedSpecialInks] = useState([]);
   const [locationColorCounts, setLocationColorCounts] = useState({});
   const [locationThreadCounts, setLocationThreadCounts] = useState({});
+  // Reorder with screens already on file at the shop, so no screen fees.
+  const [screensOnFile, setScreensOnFile] = useState(false);
   const [digitizing, setDigitizing] = useState(null);
   const [finalQuote, setFinalQuote] = useState(null);
   const [hasError, setHasError] = useState(false);
@@ -262,6 +264,8 @@ function App() {
             onPrevious={handlePrevious}
             selectedLocations={selectedLocation}
             setColorCounts={setLocationColorCounts}
+            screensOnFile={screensOnFile}
+            setScreensOnFile={setScreensOnFile}
           />
         )}
         {currentSlide === 'digitizing' && (
@@ -288,6 +292,7 @@ function App() {
             locationColorCounts={locationColorCounts}
             selectedSpecialInks={selectedSpecialInks}
             digitizing={digitizing}
+            screensOnFile={screensOnFile}
             setFinalQuote={setFinalQuote}
           />
         )}

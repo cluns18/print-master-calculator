@@ -1,16 +1,47 @@
 const P = require("./pricing.cjs");
+const SIZE_COSTS = require("./sizeCosts.cjs").STYLES;
 
 // Returns a quote, or an explicit non-quotable result. It never guesses a number
 // and never silently returns 0. See project_calc_lookup_bug_sweep: Brian wants an
 // error code plus "reach out for a quote", not a fabricated or $0 price.
 const money = (n) => Math.round(n * 100) / 100;
 
-// The blank, marked up per Kevin's sheet. 0 when the page sent no cost (the hand-built
-// fallback garments before a pick, or a customer's own blanks), and then the quote says
-// garments are separate rather than pretending the figure is all-in.
-const garmentPerPiece = (input) => {
-    const cost = Number(input.selectedGarmentCost);
-    return cost > 0 ? cost * P.GARMENT_MARKUP : 0;
+// What the blank costs at one size. XS to XL is the cost the page sent. 2XL and up come
+// from the S&S table by style, or SanMar's steps for Kevin's hand-entered picks, and never
+// drop under the regular cost if the table has gone stale.
+const sizeCost = (input, size, base) => {
+    const table = SIZE_COSTS[input.garmentStyleId];
+    if (table && table[size] > 0) return Math.max(table[size], base);
+    const steps = P.MANUAL_SIZE_STEPS[input.garmentSlug];
+    if (steps && steps[size] > 0) return base + steps[size];
+    return base;
+};
+
+// The blank, marked up per Kevin's sheet. perPiece is 0 when the page sent no cost (the
+// hand-built fallback garments before a pick, or a customer's own blanks), and then the
+// quote says garments are separate rather than pretending the figure is all-in.
+// Kevin, 2026-10-07: "add the appropriate upcharge for XXL and larger sizes where the
+// garment costs more". sizeAdders is what each bigger size adds per piece, already marked
+// up, and adderTotal is that across the order. A size breakdown that does not add up to
+// the quantity is not trusted, and the order prices at the regular blank.
+const garmentPricing = (input, qty) => {
+    const base = Number(input.selectedGarmentCost);
+    if (!(base > 0)) return { perPiece: 0, sizeAdders: {}, adderTotal: 0 };
+    const sized = Object.entries(input.sizeBreakdown || {})
+        .map(([size, n]) => [size, parseInt(n, 10) || 0])
+        .filter(([, n]) => n > 0);
+    const sizeAdders = {};
+    let adderTotal = 0;
+    if (sized.reduce((s, [, n]) => s + n, 0) === qty) {
+        for (const [size, n] of sized) {
+            const adder = money((sizeCost(input, size, base) - base) * P.GARMENT_MARKUP);
+            if (adder > 0) {
+                sizeAdders[size] = adder;
+                adderTotal += adder * n;
+            }
+        }
+    }
+    return { perPiece: base * P.GARMENT_MARKUP, sizeAdders, adderTotal };
 };
 
 // Screen print, Kevin's 2026-09-29 updated matrix. Light and dark garments each have
@@ -63,10 +94,13 @@ const buildScreenPrintQuote = (input, qty) => {
 
     const decorationPerPiece = lines.reduce((s, l) => s + l.rate, 0);
     const screens = lines.reduce((s, l) => s + l.screens, 0);
-    const screenFees = screens * P.SCREEN_FEE;
-    const garment = garmentPerPiece(input);
+    // Kevin, 2026-10-07: "We don't charge a setup fee for reorders". The customer says
+    // their screens are on file, the lead email says so, and the shop confirms it.
+    const screensOnFile = input.screensOnFile === true;
+    const screenFees = screensOnFile ? 0 : screens * P.SCREEN_FEE;
+    const garment = garmentPricing(input, qty);
     const decorationTotal = decorationPerPiece * qty;
-    const totalQuote = (decorationPerPiece + garment) * qty + screenFees;
+    const totalQuote = (decorationPerPiece + garment.perPiece) * qty + garment.adderTotal + screenFees;
     if (!(totalQuote > 0)) return { quotable: false, errorCode: "CALC_ERROR" };
 
     return {
@@ -79,13 +113,17 @@ const buildScreenPrintQuote = (input, qty) => {
         decorationPerPiece: money(decorationPerPiece),
         screens,
         screenFee: P.SCREEN_FEE,
+        screensOnFile,
         screenFees: money(screenFees),
         feesPerPiece: money(screenFees / qty),
         decorationTotal: money(decorationTotal),
         totalQuote: money(totalQuote),
         pricePerItem: money(totalQuote / qty),
-        garmentIncluded: garment > 0,
-        decorationOnly: !(garment > 0),
+        // What a regular size costs per piece, and what each bigger size adds to it.
+        basePerItem: money((totalQuote - garment.adderTotal) / qty),
+        sizeAdders: garment.sizeAdders,
+        garmentIncluded: garment.perPiece > 0,
+        decorationOnly: !(garment.perPiece > 0),
     };
 };
 
@@ -129,9 +167,9 @@ const buildQuote = (input) => {
     const setupKey = digitizing && P.DIGITIZING[digitizing] ? digitizing : "small";
     const setupFee = P.DIGITIZING[setupKey].fee;
 
-    const garment = garmentPerPiece(input);
+    const garment = garmentPricing(input, qty);
     const decorationTotal = decorationPerPiece * qty;
-    const totalQuote = (decorationPerPiece + garment) * qty + setupFee;
+    const totalQuote = (decorationPerPiece + garment.perPiece) * qty + garment.adderTotal + setupFee;
 
     return {
         quotable: true,
@@ -145,9 +183,11 @@ const buildQuote = (input) => {
         setupFee,
         totalQuote: Math.round(totalQuote * 100) / 100,
         pricePerItem: Math.round((totalQuote / qty) * 100) / 100,
+        basePerItem: money((totalQuote - garment.adderTotal) / qty),
+        sizeAdders: garment.sizeAdders,
         // With no blank cost the figure is decoration only and must not read as all-in.
-        garmentIncluded: garment > 0,
-        decorationOnly: !(garment > 0),
+        garmentIncluded: garment.perPiece > 0,
+        decorationOnly: !(garment.perPiece > 0),
     };
 };
 

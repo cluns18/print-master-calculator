@@ -4,6 +4,7 @@ import calculateFinalQuote from '../utils/functions';
 import { sendQuote, clean, escName, artworkStatus } from '../utils/quoteDelivery';
 import { throttle } from 'lodash';
 import SHOP_CONFIG from '../config/shop';
+import { LOCATIONS } from '../config/locations';
 import { SP_PLACEMENTS } from './SPLocationSelect';
 
 const GARMENT_SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
@@ -13,7 +14,7 @@ export default function FinalQuote({
     onNext, onPrevious, selectedProject, selectedGarment,
     selectedSPGarment, selectedEmbGarment, selectedColor,
     selectedArtwork, artworkFile, artworkDescription, locationColorCounts,
-    selectedSpecialInks, digitizing, selectedLocation, setFinalQuote
+    selectedSpecialInks, digitizing, selectedLocation, screensOnFile, setFinalQuote
 }) {
     const isHat = selectedGarment?.id && HAT_GARMENTS.includes(selectedGarment.id);
     const sizes = isHat ? null : GARMENT_SIZES;
@@ -39,7 +40,7 @@ export default function FinalQuote({
     const [quantity, setQuantity] = useState(MOQ);
     const [pricePerItem, setPricePerItem] = useState(0);
     const [totalPrice, setTotalPrice] = useState(0);
-    const [formData, setFormData] = useState({ name: '', company: '', email: '', phone: '' });
+    const [formData, setFormData] = useState({ name: '', company: '', email: '', phone: '', pickup: '' });
     const [isFormValid, setIsFormValid] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formErrors, setFormErrors] = useState({});
@@ -55,11 +56,12 @@ export default function FinalQuote({
         if (total > 0) setQuantity(total);
     };
 
-    const fetchQuote = useCallback(throttle(async (qty) => {
+    const fetchQuote = useCallback(throttle(async (qty, sizes) => {
         const result = await calculateFinalQuote(
             selectedGarment, qty,
             { selectedProject, selectedLocation, digitizing, locationColorCounts, selectedColor,
-              pickedGarment: selectedProject === 'screenPrinting' ? selectedSPGarment : selectedEmbGarment }
+              pickedGarment: selectedProject === 'screenPrinting' ? selectedSPGarment : selectedEmbGarment,
+              sizeBreakdown: sizes, screensOnFile }
         );
         setQuote(result);
         if (result?.quotable) {
@@ -73,9 +75,18 @@ export default function FinalQuote({
             setTotalPrice(0);
             setFinalQuote({ pricePerItem: 0, totalPrice: 0, quantity: qty, errorCode: result?.errorCode });
         }
-    }, 200), [selectedProject, selectedGarment, selectedSPGarment, selectedEmbGarment, selectedLocation, digitizing, locationColorCounts, selectedColor, setFinalQuote]);
+    }, 200), [selectedProject, selectedGarment, selectedSPGarment, selectedEmbGarment, selectedLocation, digitizing, locationColorCounts, selectedColor, screensOnFile, setFinalQuote]);
 
-    useEffect(() => { fetchQuote(quantity); }, [quantity, fetchQuote]);
+    // The breakdown is part of the price now (2XL and up cost more), so moving a piece
+    // from L to 2XL re-prices even though the quantity did not change.
+    useEffect(() => { fetchQuote(quantity, sizeBreakdown); }, [quantity, sizeBreakdown, fetchQuote]);
+
+    // What a regular size costs per piece and what each bigger size adds, for the
+    // size-by-size subtotals.
+    const basePerItem = quote?.quotable ? (quote.basePerItem ?? pricePerItem) : 0;
+    const sizeAdders = (quote?.quotable && quote.sizeAdders) || {};
+    const adderSizes = Object.keys(sizeAdders);
+    const pickup = LOCATIONS.find((l) => l.id === formData.pickup) || null;
 
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const validatePhone = (phone) => /^\d{10}$|^\d{3}-\d{3}-\d{4}$|^\(\d{3}\)\s\d{3}-\d{4}$|^\+\d{1,3}\d{7,14}$/.test(phone.replace(/\s/g, ''));
@@ -93,6 +104,7 @@ export default function FinalQuote({
         else if (!validateEmail(formData.email)) errors.email = 'Please enter a valid email address';
         if (formData.phone.trim() === '') errors.phone = 'Phone number is required';
         else if (!validatePhone(formData.phone)) errors.phone = 'Please enter a valid phone number';
+        if (!formData.pickup) errors.pickup = 'Pickup location is required';
         setFormErrors(errors);
         setIsFormValid(Object.keys(errors).length === 0);
     }, [formData]);
@@ -124,13 +136,24 @@ export default function FinalQuote({
             : 'Screen print - too many screens, quote by hand',
         SP_MATRIX_MISSING: 'Screen print - priced by hand, no online rate',
     };
+    // This string prints in the customer's copy too, so it says what is included and
+    // never how the blank is marked up (Kevin, 2026-10-07).
+    const garmentText = !quote?.garmentIncluded
+        ? 'DECORATION ONLY - garments quoted separately'
+        : adderSizes.length > 0
+            ? `Garment included, ${adderSizes.map((s) => `${s} +$${sizeAdders[s].toFixed(2)}/pc`).join(', ')}`
+            : 'Garment included';
+    const pickupText = pickup ? [`Pickup: ${pickup.name}`] : [];
     const inkDetails = quote?.quotable
         ? quote.service === 'screenPrinting'
             ? [
                 quote.lines.map((l) => `${spLineText(l)} @ $${l.rate.toFixed(2)}/pc`).join(' + '),
-                `Screens: ${quote.screens} x $${quote.screenFee} = $${quote.screenFees.toFixed(2)} one-time`,
+                quote.screensOnFile
+                    ? `Screens: ${quote.screens} on file, REORDER per customer, no screen fees`
+                    : `Screens: ${quote.screens} x $${quote.screenFee} = $${quote.screenFees.toFixed(2)} one-time`,
                 `Tier: ${quote.tier} (${quote.dark ? 'dark' : 'light'} garment pricing)`,
-                quote.garmentIncluded ? 'Blank included at wholesale x2' : 'DECORATION ONLY - garments quoted separately',
+                garmentText,
+                ...pickupText,
               ].join(' | ')
             : [
                 quote.lines
@@ -138,10 +161,11 @@ export default function FinalQuote({
                     .join(' + '),
                 `Set-up: ${quote.setupLabel}${quote.setupFee ? ` ($${quote.setupFee})` : ' (no charge)'}`,
                 `Tier: ${quote.tier}`,
-                quote.garmentIncluded ? 'Blank included at wholesale x2' : 'DECORATION ONLY - garments quoted separately',
+                garmentText,
+                ...pickupText,
               ].join(' | ')
         : selectedProject === 'screenPrinting'
-            ? (spReasonText[quote?.errorCode] || 'Screen print - could not price online, quote by hand')
+            ? [spReasonText[quote?.errorCode] || 'Screen print - could not price online, quote by hand', ...pickupText].join(' | ')
             : 'Incomplete selection';
 
     // --- Artwork status ---
@@ -155,6 +179,12 @@ export default function FinalQuote({
     // service registry. No EmailJS, no secrets in this front end. Override URL via env.
     const payload = {
         shop_id: SHOP_CONFIG.shop_id,
+        // The mail service lets an inline shop block override the registry, so the lead
+        // lands in the picked shop's inbox and the customer's copy carries that shop's
+        // phone and address. Same routing as the quote form.
+        shop: pickup
+            ? { shop_email: pickup.email, shop_phone: pickup.phone, shop_address: `${pickup.address}, ${pickup.cityLine}` }
+            : undefined,
         customer: {
             name: escName(clean(formData.name, 120)),
             email: clean(formData.email, 200),
@@ -247,7 +277,9 @@ export default function FinalQuote({
                         color: 'rgba(240,237,228,0.75)', textAlign: 'center', margin: '0 0 6px',
                     }}>
                         {quote.service === 'screenPrinting'
-                            ? `Print price shown is for decoration and includes $${quote.screenFees.toFixed(2)} in screen fees. Garments quoted separately.`
+                            ? (quote.screensOnFile
+                                ? 'Print price shown is for decoration with your screens on file. Garments quoted separately.'
+                                : `Print price shown is for decoration and includes $${quote.screenFees.toFixed(2)} in screen fees. Garments quoted separately.`)
                             : 'Embroidery price shown is for decoration. Garments quoted separately.'}
                     </p>
                 )}
@@ -342,6 +374,14 @@ export default function FinalQuote({
                             <input type='text' name='company' placeholder='Company (optional)' value={formData.company} onChange={handleChange} style={inputStyle} />
                             <input type='email' name='email' placeholder='Your Best Email *' value={formData.email} onChange={handleChange} style={inputStyle} />
                             <input type='tel' name='phone' placeholder='Phone Number *' value={formData.phone} onChange={handleChange} style={inputStyle} />
+                            {/* Kevin, 2026-10-07: pick the shop so the lead goes to the right PrintMaster. */}
+                            <select name='pickup' value={formData.pickup} onChange={handleChange} aria-label='Pickup location'
+                                style={{ ...inputStyle, gridColumn: '1 / -1', color: formData.pickup ? '#0a0a0a' : '#6f6f66', cursor: 'pointer' }}>
+                                <option value='' disabled>Pickup Location *</option>
+                                {LOCATIONS.map((l) => (
+                                    <option key={l.id} value={l.id}>{l.name} - {l.address}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <button
@@ -397,7 +437,12 @@ export default function FinalQuote({
                                             const qty = sizeBreakdown[size] || 0;
                                             return (
                                                 <tr key={size} style={{ borderBottom: '1px solid rgba(26,31,20,0.06)' }}>
-                                                    <td style={{ padding: '4px 0', color: '#0a0a0a', fontWeight: 500 }}>{size}</td>
+                                                    <td style={{ padding: '4px 0', color: '#0a0a0a', fontWeight: 500 }}>
+                                                        {size}
+                                                        {sizeAdders[size] > 0 && (
+                                                            <span style={{ color: '#005a8f', fontWeight: 600, marginLeft: '6px' }}>+${sizeAdders[size].toFixed(2)} ea</span>
+                                                        )}
+                                                    </td>
                                                     <td style={{ padding: '4px 0', textAlign: 'center' }}>
                                                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                                             <button onClick={() => handleSizeChange(size, -1)} style={{ width: '18px', height: '18px', borderRadius: '3px', border: '1px solid rgba(26,31,20,0.15)', background: 'rgba(26,31,20,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.7rem', color: '#0a0a0a', padding: 0, lineHeight: 1 }}>-</button>
@@ -405,7 +450,7 @@ export default function FinalQuote({
                                                             <button onClick={() => handleSizeChange(size, 1)} style={{ width: '18px', height: '18px', borderRadius: '3px', border: '1px solid rgba(0, 122, 195, 0.3)', background: 'rgba(0, 122, 195, 0.15)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.7rem', color: '#005a8f', padding: 0, lineHeight: 1 }}>+</button>
                                                         </div>
                                                     </td>
-                                                    <td style={{ padding: '4px 0', textAlign: 'right', color: qty > 0 ? '#0a0a0a' : '#6f6f66', fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}>{quote?.quotable ? `$${(qty * pricePerItem).toFixed(2)}` : '-'}</td>
+                                                    <td style={{ padding: '4px 0', textAlign: 'right', color: qty > 0 ? '#0a0a0a' : '#6f6f66', fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}>{quote?.quotable ? `$${(qty * (basePerItem + (sizeAdders[size] || 0))).toFixed(2)}` : '-'}</td>
                                                 </tr>
                                             );
                                         })}
@@ -415,7 +460,7 @@ export default function FinalQuote({
                         )}
 
                         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '0.6rem', color: '#6f6f66', textAlign: 'center', lineHeight: 1.4, marginBottom: '8px' }}>
-                            Local pickup price. Submit to inquire about shipping. Estimate may vary slightly on final approval.
+                            {pickup ? `Pickup at PrintMaster ${pickup.name}.` : 'Local pickup price.'} Submit to inquire about shipping. Estimate may vary slightly on final approval.
                         </p>
 
                         <div className='text-center'>
